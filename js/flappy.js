@@ -33,12 +33,50 @@ function ParallelBars(height, opening, x) {
    }
 
    this.getX = () => parseInt(this.element.style.left.split('px')[0])
-   this.setX = () => this.element.style.left = `${x}px`
+   this.setX = (x) => this.element.style.left = `${x}px`
    this.getWidth = () => this.element.clientWidth
 
    this.sortOpening()
    this.setX(x)
 }
 
-const b = new ParallelBars(700, 200, 400)
-document.querySelector('[fb-flappy]').appendChild(b.element)
+function Barriers(height, width, opening, space, notifyScore) {
+   this.pairs = [
+      new ParallelBars(height, opening, width),
+      new ParallelBars(height, opening, width + space),
+      new ParallelBars(height, opening, width + space * 2),
+      new ParallelBars(height, opening, width + space * 3)
+   ]
+
+   const displacement = 3
+   
+   this.animate = () => {
+      this.pairs.forEach(pair => {
+         pair.setX(pair.getX() - displacement)
+
+         console.log('Pair: ', pair.getX())
+
+         if (pair.getX() < -pair.getWidth()) {
+            pair.setX(pair.getX() + space * this.pairs.length)
+            pair.sortOpening()
+         }
+
+         const middle = width / 2
+         const crossMiddle = pair.getX() + displacement >= middle && pair.getX() < middle
+
+         if (crossMiddle) {
+            notifyScore()
+         }
+      })
+   }
+}
+
+const barriers = new Barriers(700, 1200, 200, 400)
+const gameArea = document.querySelector('[fb-flappy]')
+barriers.pairs.forEach(pair => {
+   gameArea.appendChild(pair.element)
+})
+
+setInterval(() => {
+   barriers.animate()
+}, 20)
