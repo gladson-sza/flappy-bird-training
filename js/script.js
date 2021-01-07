@@ -4,7 +4,6 @@ function newElement(tagName, className) {
    return element
 }
 
-
 function isOverlapping(elementA, elementB) {
    const a = elementA.getBoundingClientRect()
    const b = elementB.getBoundingClientRect()
@@ -28,7 +27,6 @@ function verifyCollision(bird, barriers) {
 
    return isColliding
 }
-
 
 function Barrier(reverse = false) {
    const border = newElement('div', 'border')
@@ -134,32 +132,105 @@ function Progress() {
    this.updateScore(0)
 }
 
+function GameOver(height, width) {
+   this.element = newElement('div', 'game-over-board')
+
+   const textTitle = newElement('h1', 'game-over-info')
+   const textScore = newElement('p', 'game-over-info')
+   const textHighScore = newElement('p', 'game-over-info')
+   const textTryAgain = newElement('p', 'game-over-info')
+
+   textTitle.innerHTML = 'GAME OVER'
+   textTryAgain.innerHTML = 'Press any key to try again'
+
+   this.element.appendChild(textTitle)
+   this.element.appendChild(textScore)
+   this.element.appendChild(textHighScore)
+   this.element.appendChild(textTryAgain)
+
+   this.setScores = (score, highScore) => {
+      textScore.innerHTML = `Score: ${score}`
+      textHighScore.innerHTML = `High Score: ${highScore}`
+   }
+}
+
+function GameStart(height, width) {
+   this.element = newElement('div', 'game-over-board')
+
+   const title = newElement('h1', 'game-over-info')
+   title.innerHTML = 'Press any key to start'
+
+   this.element.appendChild(title)
+}
+
 function FlappyBird() {
    let score = 0
+   let highScore = 0
+   let isPlaying = false
 
    const gameArea = document.querySelector('[fb-flappy]')
    const height = gameArea.clientHeight
    const width = gameArea.clientWidth
 
-   const progress = new Progress()
-   const barriers = new Barriers(height, width, 200, 400, () => {
-      progress.updateScore(++score)
-   })
-   const bird = new Bird(height)
+   let gameStart = null
+   let progress = null
+   let barriers = null
+   let bird = null
+   let gameOver = null
 
-   gameArea.appendChild(progress.element)
-   gameArea.appendChild(bird.element)
-   barriers.pairs.forEach(pair => {
-      gameArea.appendChild(pair.element)
-   })
+   const initialize = () => {
+      score = 0
+      gameStart = new GameStart(height, width)
+      progress = new Progress()
+      barriers = new Barriers(height, width, 200, 400, () => {
+         progress.updateScore(++score)
+         if (score > highScore) {
+            highScore = score
+         }
+      })
+      bird = new Bird(height)
+      gameOver = new GameOver(height, width)
+
+      gameArea.appendChild(gameStart.element)
+      gameArea.appendChild(progress.element)
+      gameArea.appendChild(bird.element)
+      barriers.pairs.forEach(pair => {
+         gameArea.appendChild(pair.element)
+      })
+   }
 
    this.start = () => {
-      const timer = setInterval(() => {
-         barriers.animate()
-         bird.animate()
+      initialize()
+      window.onkeypress = e => {
+         isPlaying = true
+         gameStart.element.innerHTML = ''
+      }
 
-         if (verifyCollision(bird, barriers)) {
-            clearInterval(timer)
+      const timer = setInterval(() => {
+         if (isPlaying) {
+            barriers.animate()
+            bird.animate()
+
+            if (verifyCollision(bird, barriers)) {
+               isPlaying = false
+
+               window.onkeyup = e => {
+                  setTimeout(() => {
+                     gameOver.setScores(score, highScore)
+                     gameArea.appendChild(gameOver.element)
+
+                     window.onkeyup = e => {
+                        window.onkeyup = null
+                        gameArea.innerHTML = ''
+                        this.start()
+                     }
+                  }, 200)
+               }
+
+               window.onkeypress = null
+
+               clearInterval(timer)
+            }
          }
       }, 20)
    }
